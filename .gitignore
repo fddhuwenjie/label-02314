@@ -1,0 +1,51 @@
+# Build directories
+build/
+build_test/
+cmake-build-*/
+out/
+
+# Qt generated files
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.qm
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+
+# IDE files
+.idea/
+.vscode/
+*.pro.user
+*.pro.user.*
+CMakeLists.txt.user
+*.autosave
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Docker
+.docker/
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local

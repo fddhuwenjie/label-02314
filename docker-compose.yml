@@ -1,0 +1,58 @@
+services:
+  chatserver:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chat-server
+    ports:
+      - "9999:9999"
+    environment:
+      - DB_TYPE=sqlite
+      - DB_NAME=/app/data/chatserver.db
+    volumes:
+      - chat-data:/app/data
+    restart: unless-stopped
+    networks:
+      - chat-network
+
+  # 可选: MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: chat-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root123
+      - MYSQL_DATABASE=chatserver
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - chat-network
+    profiles:
+      - mysql
+
+  # 可选: PostgreSQL 数据库
+  postgres:
+    image: postgres:15
+    container_name: chat-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123
+      - POSTGRES_DB=chatserver
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - chat-network
+    profiles:
+      - postgres
+
+volumes:
+  chat-data:
+  mysql-data:
+  postgres-data:
+
+networks:
+  chat-network:
+    driver: bridge
