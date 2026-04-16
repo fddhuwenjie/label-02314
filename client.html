@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket聊天室</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 登录注册界面 */
+        .auth-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .auth-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 400px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 2px solid #eee;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .auth-tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .auth-error {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* 主聊天界面 */
+        .chat-container {
+            display: none;
+            height: 100vh;
+            grid-template-columns: 280px 1fr;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .sidebar-header h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .current-user {
+            font-size: 14px;
+            color: #bdc3c7;
+        }
+
+        .online-users {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .user-item {
+            padding: 12px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-item:hover,
+        .user-item.active {
+            background: #34495e;
+        }
+
+        .user-item .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ecc71;
+        }
+
+        .user-item .username {
+            flex: 1;
+        }
+
+        .user-item .unread-badge {
+            background: #e74c3c;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* 主聊天区域 */
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            max-width: 70%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.own {
+            margin-left: auto;
+        }
+
+        .message.other {
+            margin-right: auto;
+        }
+
+        .message-header {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .message.own .message-header {
+            text-align: right;
+        }
+
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.own .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.other .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .system-message {
+            text-align: center;
+            margin: 16px 0;
+        }
+
+        .system-message span {
+            background: #e9ecef;
+            color: #495057;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        /* 输入区域 */
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 14px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            width: 60px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #bbb;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .chat-container {
+                grid-template-columns: 200px 1fr;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录注册界面 -->
+    <div class="auth-container" id="authContainer">
+        <div class="auth-box">
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">登录</div>
+                <div class="auth-tab" data-tab="register">注册</div>
+            </div>
+            
+            <div class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">用户名</label>
+                    <input type="text" id="loginUsername" placeholder="请输入用户名" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入密码" required>
+                </div>
+                <button class="auth-btn" onclick="handleLogin()">登录</button>
+                <div class="auth-error" id="loginError"></div>
+            </div>
+            
+            <div class="auth-form" id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">用户名</label>
+                    <input type="text" id="registerUsername" placeholder="请输入用户名" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">密码</label>
+                    <input type="password" id="registerPassword" placeholder="请输入密码" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">确认密码</label>
+                    <input type="password" id="registerConfirmPassword" placeholder="请再次输入密码" required>
+                </div>
+                <button class="auth-btn" onclick="handleRegister()">注册</button>
+                <div class="auth-error" id="registerError"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主聊天界面 -->
+    <div class="chat-container" id="chatContainer">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>在线用户</h3>
+                <div class="current-user" id="currentUser"></div>
+            </div>
+            <div class="online-users" id="onlineUsers"></div>
+        </div>
+
+        <!-- 主聊天区域 -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="chat-title" id="chatTitle">群聊</div>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <input type="text" class="chat-input" id="messageInput" placeholder="输入消息..." onkeydown="handleKeyDown(event)">
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let ws = null;
+        let currentUser = null;
+        let currentChat = 'group'; // 'group' 或 用户名
+        let unreadCounts = {};
+        let privateMessages = {}; // 存储私聊消息 {targetUser: [messages]}
+
+        // 切换登录注册标签
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + 'Form').classList.add('active');
+                document.getElementById(tab.dataset.tab + 'Error').textContent = '';
+            });
+        });
+
+        // WebSocket连接管理
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.hostname}:9999`);
+            
+            ws.onopen = () => {
+                console.log('WebSocket连接成功');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    console.error('消息解析失败:', e);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket错误:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket连接关闭，尝试重连...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        // 处理接收到的消息
+        function handleMessage(data) {
+            switch(data.type) {
+                case 'login_success':
+                    handleLoginSuccess(data);
+                    break;
+                case 'register_success':
+                    showAuthSuccess('注册成功，请登录');
+                    break;
+                case 'auth_error':
+                    showAuthError(data.message);
+                    break;
+                case 'user_list':
+                    updateUserList(data.users);
+                    break;
+                case 'group_message':
+                    addMessage(data, 'group');
+                    break;
+                case 'private_message':
+                    handlePrivateMessage(data);
+                    break;
+                case 'system_message':
+                    addSystemMessage(data.content);
+                    break;
+            }
+        }
+
+        // 登录处理
+        function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            
+            if (!username || !password) {
+                showAuthError('请填写用户名和密码', 'login');
+                return;
+            }
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                connectWebSocket();
+                setTimeout(() => {
+                    sendAuthData('login', username, password);
+                }, 500);
+            } else {
+                sendAuthData('login', username, password);
+            }
+        }
+
+        // 注册处理
+        function handleRegister() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value.trim();
+            const confirmPassword = document.getElementById('registerConfirmPassword').value.trim();
+            
+            if (!username || !password || !confirmPassword) {
+                showAuthError('请填写所有字段', 'register');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAuthError('两次密码输入不一致', 'register');
+                return;
+            }
+
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                connectWebSocket();
+                setTimeout(() => {
+                    sendAuthData('register', username, password);
+                }, 500);
+            } else {
+                sendAuthData('register', username, password);
+            }
+        }
+
+        // 发送认证数据
+        function sendAuthData(type, username, password) {
+            ws.send(JSON.stringify({
+                type: type,
+                username: username,
+                password: password
+            }));
+        }
+
+        // 登录成功处理
+        function handleLoginSuccess(data) {
+            currentUser = data.username;
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'grid';
+            document.getElementById('currentUser').textContent = `当前用户: ${currentUser}`;
+            addSystemMessage(`欢迎回来，${currentUser}！`);
+        }
+
+        // 显示认证错误
+        function showAuthError(message, type = 'login') {
+            document.getElementById(type + 'Error').textContent = message;
+        }
+
+        // 显示认证成功
+        function showAuthSuccess(message) {
+            document.querySelectorAll('.auth-tab')[0].click();
+            document.getElementById('loginError').textContent = message;
+            document.getElementById('loginError').style.color = '#2ecc71';
+        }
+
+        // 更新在线用户列表
+        function updateUserList(users) {
+            const container = document.getElementById('onlineUsers');
+            container.innerHTML = '';
+            
+            // 添加群聊项
+            const groupItem = document.createElement('div');
+            groupItem.className = `user-item ${currentChat === 'group' ? 'active' : ''}`;
+            groupItem.innerHTML = `
+                <div class="online-dot"></div>
+                <div class="username">群聊</div>
+                ${unreadCounts['group'] ? `<div class="unread-badge">${unreadCounts['group']}</div>` : ''}
+            `;
+            groupItem.addEventListener('click', () => switchChat('group'));
+            container.appendChild(groupItem);
+
+            // 添加在线用户
+            users.forEach(user => {
+                if (user === currentUser) return;
+                
+                const userItem = document.createElement('div');
+                userItem.className = `user-item ${currentChat === user ? 'active' : ''}`;
+                userItem.dataset.username = user;
+                userItem.innerHTML = `
+                    <div class="online-dot"></div>
+                    <div class="username">${user}</div>
+                    ${unreadCounts[user] ? `<div class="unread-badge">${unreadCounts[user]}</div>` : ''}
+                `;
+                userItem.addEventListener('click', () => switchChat(user));
+                container.appendChild(userItem);
+            });
+        }
+
+        // 切换聊天窗口
+        function switchChat(target) {
+            currentChat = target;
+            delete unreadCounts[target];
+            
+            // 更新标题
+            document.getElementById('chatTitle').textContent = target === 'group' ? '群聊' : `与 ${target} 私聊`;
+            
+            // 清空消息区域
+            const messagesContainer = document.getElementById('chatMessages');
+            messagesContainer.innerHTML = '';
+            
+            // 加载对应消息
+            if (target === 'group') {
+                // 这里可以加载历史群聊消息
+            } else {
+                // 加载私聊历史
+                if (privateMessages[target]) {
+                    privateMessages[target].forEach(msg => addMessage(msg, target));
+                }
+            }
+            
+            // 更新用户列表激活状态
+            document.querySelectorAll('.user-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`.user-item[data-username="${target}"]`)?.classList.add('active');
+            if (target === 'group') {
+                document.querySelectorAll('.user-item')[0].classList.add('active');
+            }
+            
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // 处理私聊消息
+        function handlePrivateMessage(data) {
+            const fromUser = data.from === currentUser ? data.to : data.from;
+            
+            // 存储私聊消息
+            if (!privateMessages[fromUser]) {
+                privateMessages[fromUser] = [];
+            }
+            privateMessages[fromUser].push(data);
+            
+            if (currentChat === fromUser) {
+                addMessage(data, fromUser);
+            } else {
+                // 增加未读计数
+                unreadCounts[fromUser] = (unreadCounts[fromUser] || 0) + 1;
+                updateUserList(Object.keys(privateMessages).filter(u => u !== currentUser));
+            }
+        }
+
+        // 添加消息到界面
+        function addMessage(data, chatTarget) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const isOwn = data.from === currentUser;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
+            
+            const time = new Date(data.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    ${isOwn ? '我' : data.from} · ${time}
+                </div>
+                <div class="message-content">${escapeHtml(data.content)}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // 添加系统消息
+        function addSystemMessage(content) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const systemDiv = document.createElement('div');
+            systemDiv.className = 'system-message';
+            systemDiv.innerHTML = `<span>${escapeHtml(content)}</span>`;
+            messagesContainer.appendChild(systemDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // 发送消息
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content || !ws || ws.readyState !== WebSocket.OPEN) return;
+            
+            const message = {
+                type: currentChat === 'group' ? 'group_message' : 'private_message',
+                content: content,
+                timestamp: Date.now()
+            };
+            
+            if (currentChat !== 'group') {
+                message.to = currentChat;
+            }
+            
+            ws.send(JSON.stringify(message));
+            input.value = '';
+        }
+
+        // 键盘事件处理
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 初始化连接
+        connectWebSocket();
+    </script>
+</body>
+</html>
