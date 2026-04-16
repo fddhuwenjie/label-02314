@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天室</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 400px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 16px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .chat-container {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            background: #f5f5f5;
+        }
+
+        .chat-main {
+            display: flex;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-header p {
+            font-size: 13px;
+            color: #95a5a6;
+        }
+
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+
+        .user-item:hover {
+            background: #34495e;
+        }
+
+        .user-item.active {
+            background: #667eea;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 600;
+            margin-right: 12px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .user-nickname {
+            font-size: 12px;
+            color: #95a5a6;
+        }
+
+        .user-item.active .user-nickname {
+            color: #ddd;
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ecc71;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .chat-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #eee;
+            background: white;
+        }
+
+        .chat-header h3 {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .chat-header p {
+            font-size: 13px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.self {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            max-width: 60%;
+            margin: 0 12px;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .message.self .message-header {
+            flex-direction: row-reverse;
+        }
+
+        .message-sender {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-right: 8px;
+        }
+
+        .message.self .message-sender {
+            margin-right: 0;
+            margin-left: 8px;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: #f0f2f5;
+            color: #333;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.self .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .chat-input-area {
+            padding: 20px 24px;
+            border-top: 1px solid #eee;
+            background: white;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #eee;
+            border-radius: 24px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .private-indicator {
+            padding: 8px 16px;
+            background: #fff3cd;
+            border-bottom: 1px solid #ffc107;
+            font-size: 13px;
+            color: #856404;
+            display: none;
+        }
+
+        .private-indicator.active {
+            display: block;
+        }
+
+        .private-indicator span {
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            margin: 20px;
+            padding: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .chat-tabs {
+            display: flex;
+            padding: 8px 12px;
+            gap: 8px;
+            border-bottom: 1px solid #34495e;
+            overflow-x: auto;
+        }
+
+        .chat-tab {
+            padding: 8px 16px;
+            background: #34495e;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .chat-tab.active {
+            background: #667eea;
+        }
+
+        .chat-tab .close-btn {
+            margin-left: 8px;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .unread-badge {
+            background: #e74c3c;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 6px;
+            display: none;
+        }
+
+        .unread-badge.has-unread {
+            display: inline;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message {
+            animation: fadeIn 0.3s ease;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container" id="authContainer">
+        <div class="auth-tabs">
+            <div class="auth-tab active" data-tab="login">登录</div>
+            <div class="auth-tab" data-tab="register">注册</div>
+        </div>
+        
+        <form class="auth-form active" id="loginForm">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="loginUsername" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="loginPassword" placeholder="请输入密码">
+            </div>
+            <button type="submit" class="btn">登录</button>
+            <div class="error-message" id="loginError"></div>
+        </form>
+
+        <form class="auth-form" id="registerForm">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="regUsername" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label>昵称</label>
+                <input type="text" id="regNickname" placeholder="请输入昵称">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="regPassword" placeholder="请输入密码">
+            </div>
+            <button type="submit" class="btn">注册</button>
+            <div class="error-message" id="registerError"></div>
+        </form>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-main">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>聊天室</h2>
+                    <p id="currentUser">欢迎</p>
+                </div>
+                <div class="chat-tabs" id="chatTabs">
+                    <div class="chat-tab active" data-target="all">
+                        群聊 <span class="unread-badge" id="groupUnread">0</span>
+                    </div>
+                </div>
+                <div class="user-list" id="userList"></div>
+                <button class="logout-btn" id="logoutBtn">退出登录</button>
+            </div>
+            <div class="chat-area">
+                <div class="private-indicator" id="privateIndicator">
+                    正在与 <span id="privateTarget"></span> 私聊
+                </div>
+                <div class="chat-header">
+                    <h3 id="chatTitle">群聊</h3>
+                    <p id="chatSubtitle">与大家一起聊天吧</p>
+                </div>
+                <div class="messages" id="messages"></div>
+                <div class="chat-input-area">
+                    <div class="input-wrapper">
+                        <input type="text" class="chat-input" id="messageInput" placeholder="输入消息...">
+                        <button class="send-btn" id="sendBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentUser = null;
+        let currentNickname = null;
+        let currentChatTarget = 'all';
+        let privateChats = {};
+        let unreadCounts = {};
+
+        const authContainer = document.getElementById('authContainer');
+        const chatContainer = document.getElementById('chatContainer');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const messagesContainer = document.getElementById('messages');
+        const userList = document.getElementById('userList');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatTabs = document.getElementById('chatTabs');
+        const privateIndicator = document.getElementById('privateIndicator');
+        const privateTarget = document.getElementById('privateTarget');
+        const chatTitle = document.getElementById('chatTitle');
+        const chatSubtitle = document.getElementById('chatSubtitle');
+
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + 'Form').classList.add('active');
+            });
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            connectAndLogin(username, password);
+        });
+
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            const nickname = document.getElementById('regNickname').value;
+            register(username, password, nickname);
+        });
+
+        function connectWebSocket() {
+            return new Promise((resolve, reject) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    resolve();
+                    return;
+                }
+
+                ws = new WebSocket('ws://localhost:9999');
+
+                ws.onopen = () => {
+                    console.log('WebSocket连接成功');
+                    resolve();
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket错误:', error);
+                    reject(error);
+                };
+
+                ws.onmessage = (event) => {
+                    handleMessage(JSON.parse(event.data));
+                };
+
+                ws.onclose = () => {
+                    console.log('WebSocket连接关闭');
+                };
+            });
+        }
+
+        async function connectAndLogin(username, password) {
+            try {
+                await connectWebSocket();
+                sendMessage({
+                    type: 'login',
+                    username: username,
+                    password: password
+                });
+            } catch (error) {
+                showLoginError('连接服务器失败');
+            }
+        }
+
+        async function register(username, password, nickname) {
+            try {
+                await connectWebSocket();
+                sendMessage({
+                    type: 'register',
+                    username: username,
+                    password: password,
+                    nickname: nickname
+                });
+            } catch (error) {
+                showRegisterError('连接服务器失败');
+            }
+        }
+
+        function sendMessage(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            }
+        }
+
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'login_response':
+                    if (data.success) {
+                        currentUser = document.getElementById('loginUsername').value;
+                        currentNickname = data.nickname;
+                        showChat();
+                        sendMessage({ type: 'get_online_users' });
+                        sendMessage({ type: 'get_history', target: 'all', limit: 50 });
+                    } else {
+                        showLoginError(data.message);
+                    }
+                    break;
+                case 'register_response':
+                    if (data.success) {
+                        showRegisterError('注册成功，请登录');
+                    } else {
+                        showRegisterError(data.message);
+                    }
+                    break;
+                case 'online_users':
+                    updateUserList(data.users);
+                    break;
+                case 'chat':
+                    handleChatMessage(data);
+                    break;
+                case 'history_response':
+                    loadHistoryMessages(data.messages);
+                    break;
+                case 'error':
+                    alert(data.message);
+                    break;
+            }
+        }
+
+        function handleChatMessage(data) {
+            const isPrivate = data.to && data.to !== 'all';
+            
+            if (isPrivate) {
+                const otherUser = data.from === currentUser ? data.to : data.from;
+                if (!privateChats[otherUser]) {
+                    privateChats[otherUser] = [];
+                    addPrivateChatTab(otherUser);
+                }
+                privateChats[otherUser].push(data);
+                
+                if (currentChatTarget === otherUser) {
+                    addMessageToUI(data);
+                } else if (data.from !== currentUser) {
+                    incrementUnread(otherUser);
+                }
+            } else {
+                addMessageToUI(data);
+            }
+        }
+
+        function loadHistoryMessages(messages) {
+            messages.forEach(msg => {
+                addMessageToUI(msg, false);
+            });
+        }
+
+        function addMessageToUI(data, animate = true) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message' + (data.from === currentUser ? ' self' : '');
+            if (!animate) messageDiv.style.animation = 'none';
+
+            const isPrivate = data.to && data.to !== 'all';
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${(data.from_nickname || data.from).charAt(0).toUpperCase()}</div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-sender">${data.from_nickname || data.from}</span>
+                        <span class="message-time">${data.time || ''}</span>
+                    </div>
+                    <div class="message-bubble">${escapeHtml(data.message)}</div>
+                </div>
+            `;
+
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function updateUserList(users) {
+            userList.innerHTML = '';
+            users.forEach(user => {
+                if (user.username === currentUser) return;
+                
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+                userItem.dataset.username = user.username;
+                userItem.dataset.nickname = user.nickname;
+                
+                userItem.innerHTML = `
+                    <div class="user-avatar">${user.nickname.charAt(0).toUpperCase()}</div>
+                    <div class="user-info">
+                        <div class="user-name">${user.nickname}</div>
+                        <div class="user-nickname">@${user.username}</div>
+                    </div>
+                    <div class="online-dot"></div>
+                `;
+
+                userItem.addEventListener('click', () => {
+                    startPrivateChat(user.username, user.nickname);
+                });
+
+                userList.appendChild(userItem);
+            });
+        }
+
+        function startPrivateChat(username, nickname) {
+            currentChatTarget = username;
+            
+            if (!privateChats[username]) {
+                privateChats[username] = [];
+                addPrivateChatTab(username, nickname);
+                sendMessage({ type: 'get_history', target: username, limit: 50 });
+            }
+
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.username === username) {
+                    item.classList.add('active');
+                }
+            });
+
+            updateChatTabActive(username);
+            clearUnread(username);
+
+            chatTitle.textContent = nickname;
+            chatSubtitle.textContent = `与 ${nickname} 私聊中`;
+            privateTarget.textContent = nickname;
+            privateIndicator.classList.add('active');
+
+            messagesContainer.innerHTML = '';
+            privateChats[username].forEach(msg => addMessageToUI(msg, false));
+        }
+
+        function addPrivateChatTab(username, nickname) {
+            const tab = document.createElement('div');
+            tab.className = 'chat-tab';
+            tab.dataset.target = username;
+            tab.innerHTML = `
+                ${nickname || username}
+                <span class="unread-badge" data-target="${username}">0</span>
+                <span class="close-btn" data-target="${username}">×</span>
+            `;
+
+            tab.querySelector('.close-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                closePrivateChat(username);
+            });
+
+            tab.addEventListener('click', () => {
+                if (username === 'all') {
+                    switchToGroupChat();
+                } else {
+                    const userItem = document.querySelector(`.user-item[data-username="${username}"]`);
+                    startPrivateChat(username, userItem?.dataset.nickname || username);
+                }
+            });
+
+            chatTabs.appendChild(tab);
+        }
+
+        function closePrivateChat(username) {
+            const tab = chatTabs.querySelector(`.chat-tab[data-target="${username}"]`);
+            if (tab) tab.remove();
+            delete privateChats[username];
+            delete unreadCounts[username];
+            
+            if (currentChatTarget === username) {
+                switchToGroupChat();
+            }
+        }
+
+        function switchToGroupChat() {
+            currentChatTarget = 'all';
+            updateChatTabActive('all');
+            
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            chatTitle.textContent = '群聊';
+            chatSubtitle.textContent = '与大家一起聊天吧';
+            privateIndicator.classList.remove('active');
+
+            messagesContainer.innerHTML = '';
+            sendMessage({ type: 'get_history', target: 'all', limit: 50 });
+        }
+
+        function updateChatTabActive(target) {
+            document.querySelectorAll('.chat-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.target === target) {
+                    tab.classList.add('active');
+                }
+            });
+        }
+
+        function incrementUnread(target) {
+            if (!unreadCounts[target]) unreadCounts[target] = 0;
+            unreadCounts[target]++;
+            
+            const badge = chatTabs.querySelector(`.unread-badge[data-target="${target}"]`);
+            if (badge) {
+                badge.textContent = unreadCounts[target];
+                badge.classList.add('has-unread');
+            }
+        }
+
+        function clearUnread(target) {
+            unreadCounts[target] = 0;
+            const badge = chatTabs.querySelector(`.unread-badge[data-target="${target}"]`);
+            if (badge) {
+                badge.textContent = '0';
+                badge.classList.remove('has-unread');
+            }
+        }
+
+        function showChat() {
+            authContainer.style.display = 'none';
+            chatContainer.style.display = 'block';
+            document.getElementById('currentUser').textContent = `当前用户: ${currentNickname}`;
+        }
+
+        function showLoginError(message) {
+            const errorEl = document.getElementById('loginError');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function showRegisterError(message) {
+            const errorEl = document.getElementById('registerError');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        sendBtn.addEventListener('click', sendChatMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        });
+
+        function sendChatMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            sendMessage({
+                type: 'chat',
+                to: currentChatTarget,
+                message: message
+            });
+
+            messageInput.value = '';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (ws) ws.close();
+            location.reload();
+        });
+
+        chatTabs.querySelector('.chat-tab[data-target="all"]').addEventListener('click', switchToGroupChat);
+    </script>
+</body>
+</html>
