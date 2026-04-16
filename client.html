@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天室</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .auth-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 400px;
+        }
+
+        .auth-box h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .tab-group {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            color: #888;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .chat-container {
+            display: none;
+            height: 100vh;
+        }
+
+        .chat-main {
+            display: flex;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: #34495e;
+            border-bottom: 1px solid #4a5f7a;
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .current-user {
+            font-size: 13px;
+            color: #a0b8d0;
+        }
+
+        .online-count {
+            padding: 15px 20px;
+            font-size: 13px;
+            color: #a0b8d0;
+            border-bottom: 1px solid #4a5f7a;
+        }
+
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .user-item {
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .user-item:hover {
+            background: #34495e;
+        }
+
+        .user-item.active {
+            background: #667eea;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: #a0b8d0;
+        }
+
+        .logout-btn {
+            margin: 20px;
+            padding: 12px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f7fa;
+        }
+
+        .chat-header {
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .chat-subtitle {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 30px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.own {
+            align-items: flex-end;
+        }
+
+        .message-header {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
+        .message.own .message-header {
+            text-align: right;
+        }
+
+        .message-bubble {
+            max-width: 60%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .message.other .message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .message.own .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.private .message-bubble {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .message.own.private .message-bubble {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .input-area {
+            padding: 20px 30px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 15px;
+        }
+
+        .input-wrapper input {
+            flex: 1;
+            padding: 14px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .send-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 1000;
+        }
+
+        .connection-status.connected {
+            background: #27ae60;
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .connection-status.connecting {
+            background: #f39c12;
+            color: white;
+        }
+
+        .private-indicator {
+            background: #fff3cd;
+            color: #856404;
+            padding: 8px 15px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .private-indicator.active {
+            display: block;
+        }
+
+        .private-close {
+            float: right;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connectionStatus">未连接</div>
+
+    <div class="auth-container" id="authContainer">
+        <div class="auth-box">
+            <h1>💬 聊天室</h1>
+            <div class="tab-group">
+                <div class="tab active" id="loginTab" onclick="switchTab('login')">登录</div>
+                <div class="tab" id="registerTab" onclick="switchTab('register')">注册</div>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="loginUsername" required placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" required placeholder="请输入密码">
+                </div>
+                <button type="submit" class="btn">登录</button>
+            </form>
+
+            <form id="registerForm" style="display: none;" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="regUsername" required placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="regNickname" required placeholder="请输入昵称">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="regPassword" required placeholder="请输入密码">
+                </div>
+                <button type="submit" class="btn">注册</button>
+            </form>
+
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-main">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>在线用户</h2>
+                    <div class="current-user" id="currentUserInfo"></div>
+                </div>
+                <div class="online-count" id="onlineCount">共 0 人在线</div>
+                <div class="user-list" id="userList"></div>
+                <button class="logout-btn" onclick="handleLogout()">退出登录</button>
+            </div>
+            
+            <div class="chat-area">
+                <div class="private-indicator" id="privateIndicator">
+                    正在与 <span id="privateTarget"></span> 私聊
+                    <span class="private-close" onclick="switchToGroup()">× 返回群聊</span>
+                </div>
+                <div class="chat-header">
+                    <div>
+                        <div class="chat-title" id="chatTitle">群聊</div>
+                        <div class="chat-subtitle" id="chatSubtitle">与大家一起聊天</div>
+                    </div>
+                </div>
+                <div class="messages-container" id="messagesContainer"></div>
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <input type="text" id="messageInput" placeholder="输入消息..." onkeypress="handleKeyPress(event)">
+                        <button class="send-btn" onclick="sendMessage()">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentUser = null;
+        let currentNickname = null;
+        let currentChatTarget = 'all';
+        let onlineUsers = [];
+        let privateMessages = {};
+        let groupMessages = [];
+
+        const WS_URL = 'ws://localhost:9999';
+
+        function init() {
+            connectWebSocket();
+        }
+
+        function connectWebSocket() {
+            updateConnectionStatus('connecting');
+            
+            try {
+                ws = new WebSocket(WS_URL);
+                
+                ws.onopen = function() {
+                    updateConnectionStatus('connected');
+                    console.log('WebSocket连接已建立');
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleServerMessage(data);
+                    } catch (e) {
+                        console.error('解析消息失败:', e);
+                    }
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket错误:', error);
+                    updateConnectionStatus('disconnected');
+                };
+
+                ws.onclose = function() {
+                    updateConnectionStatus('disconnected');
+                    console.log('WebSocket连接已关闭');
+                    if (currentUser) {
+                        setTimeout(connectWebSocket, 3000);
+                    }
+                };
+            } catch (e) {
+                console.error('创建WebSocket失败:', e);
+                updateConnectionStatus('disconnected');
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            const el = document.getElementById('connectionStatus');
+            el.className = 'connection-status ' + status;
+            const texts = {
+                connected: '已连接',
+                disconnected: '未连接',
+                connecting: '连接中...'
+            };
+            el.textContent = texts[status];
+        }
+
+        function switchTab(tab) {
+            const loginTab = document.getElementById('loginTab');
+            const registerTab = document.getElementById('registerTab');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const errorMsg = document.getElementById('errorMessage');
+
+            errorMsg.style.display = 'none';
+
+            if (tab === 'login') {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+            } else {
+                registerTab.classList.add('active');
+                loginTab.classList.remove('active');
+                registerForm.style.display = 'block';
+                loginForm.style.display = 'none';
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            sendMessageToServer({
+                type: 'login',
+                username: username,
+                password: password
+            });
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+            const username = document.getElementById('regUsername').value.trim();
+            const nickname = document.getElementById('regNickname').value.trim();
+            const password = document.getElementById('regPassword').value;
+
+            sendMessageToServer({
+                type: 'register',
+                username: username,
+                nickname: nickname,
+                password: password
+            });
+        }
+
+        function sendMessageToServer(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(message));
+            } else {
+                showError('未连接到服务器');
+            }
+        }
+
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        function handleServerMessage(data) {
+            console.log('收到消息:', data);
+
+            switch (data.type) {
+                case 'login_response':
+                    handleLoginResponse(data);
+                    break;
+                case 'register_response':
+                    handleRegisterResponse(data);
+                    break;
+                case 'chat':
+                    handleChatMessage(data);
+                    break;
+                case 'online_users':
+                    handleOnlineUsers(data);
+                    break;
+                case 'history_response':
+                    handleHistoryResponse(data);
+                    break;
+                case 'error':
+                    showError(data.message);
+                    break;
+            }
+        }
+
+        function handleLoginResponse(data) {
+            if (data.success) {
+                currentUser = document.getElementById('loginUsername').value.trim();
+                currentNickname = data.nickname;
+                showChatInterface();
+                sendMessageToServer({ type: 'get_online_users' });
+                sendMessageToServer({ type: 'get_history', target: 'all', limit: 50 });
+            } else {
+                showError(data.message);
+            }
+        }
+
+        function handleRegisterResponse(data) {
+            if (data.success) {
+                alert('注册成功！请登录');
+                switchTab('login');
+            } else {
+                showError(data.message);
+            }
+        }
+
+        function showChatInterface() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'block';
+            document.getElementById('currentUserInfo').textContent = `当前用户: ${currentNickname} (${currentUser})`;
+        }
+
+        function handleChatMessage(data) {
+            const isPrivate = data.to && data.to !== 'all';
+            
+            if (isPrivate) {
+                const otherUser = data.from === currentUser ? data.to : data.from;
+                if (!privateMessages[otherUser]) {
+                    privateMessages[otherUser] = [];
+                }
+                privateMessages[otherUser].push(data);
+                
+                if (currentChatTarget === otherUser) {
+                    renderMessage(data, true);
+                }
+            } else {
+                groupMessages.push(data);
+                if (currentChatTarget === 'all') {
+                    renderMessage(data, false);
+                }
+            }
+        }
+
+        function renderMessage(data, isPrivate) {
+            const container = document.getElementById('messagesContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + (data.from === currentUser ? 'own' : 'other');
+            if (isPrivate) {
+                messageDiv.classList.add('private');
+            }
+
+            const time = data.time || data.timestamp || '';
+            const header = document.createElement('div');
+            header.className = 'message-header';
+            header.textContent = `${data.from_nickname || data.from} - ${time}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = data.message;
+
+            messageDiv.appendChild(header);
+            messageDiv.appendChild(bubble);
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function handleOnlineUsers(data) {
+            onlineUsers = data.users;
+            renderUserList();
+        }
+
+        function renderUserList() {
+            const listEl = document.getElementById('userList');
+            document.getElementById('onlineCount').textContent = `共 ${onlineUsers.length} 人在线`;
+            
+            listEl.innerHTML = '';
+
+            const groupItem = document.createElement('div');
+            groupItem.className = 'user-item ' + (currentChatTarget === 'all' ? 'active' : '');
+            groupItem.innerHTML = `
+                <div class="user-avatar">👥</div>
+                <div class="user-info">
+                    <div class="user-name">群聊</div>
+                    <div class="user-role">所有人</div>
+                </div>
+            `;
+            groupItem.onclick = () => switchToGroup();
+            listEl.appendChild(groupItem);
+
+            onlineUsers.forEach(user => {
+                if (user.username === currentUser) return;
+
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item ' + (currentChatTarget === user.username ? 'active' : '');
+                userItem.innerHTML = `
+                    <div class="user-avatar">${user.nickname.charAt(0).toUpperCase()}</div>
+                    <div class="user-info">
+                        <div class="user-name">${user.nickname}</div>
+                        <div class="user-role">@${user.username}</div>
+                    </div>
+                `;
+                userItem.onclick = () => switchToPrivateChat(user.username, user.nickname);
+                listEl.appendChild(userItem);
+            });
+        }
+
+        function switchToGroup() {
+            currentChatTarget = 'all';
+            document.getElementById('privateIndicator').classList.remove('active');
+            document.getElementById('chatTitle').textContent = '群聊';
+            document.getElementById('chatSubtitle').textContent = '与大家一起聊天';
+            renderUserList();
+            renderMessages();
+        }
+
+        function switchToPrivateChat(username, nickname) {
+            currentChatTarget = username;
+            document.getElementById('privateIndicator').classList.add('active');
+            document.getElementById('privateTarget').textContent = nickname;
+            document.getElementById('chatTitle').textContent = `私聊: ${nickname}`;
+            document.getElementById('chatSubtitle').textContent = `与 @${username} 的私聊`;
+            renderUserList();
+            renderMessages();
+            sendMessageToServer({ type: 'get_history', target: username, limit: 50 });
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+
+            if (currentChatTarget === 'all') {
+                groupMessages.forEach(msg => renderMessage(msg, false));
+            } else {
+                const messages = privateMessages[currentChatTarget] || [];
+                messages.forEach(msg => renderMessage(msg, true));
+            }
+        }
+
+        function handleHistoryResponse(data) {
+            if (!data.messages) return;
+
+            data.messages.forEach(msg => {
+                if (msg.is_group) {
+                    groupMessages.push(msg);
+                } else {
+                    const otherUser = msg.from === currentUser ? msg.to : msg.from;
+                    if (!privateMessages[otherUser]) {
+                        privateMessages[otherUser] = [];
+                    }
+                    privateMessages[otherUser].push(msg);
+                }
+            });
+            renderMessages();
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            if (!currentUser) {
+                showError('请先登录');
+                return;
+            }
+
+            sendMessageToServer({
+                type: 'chat',
+                to: currentChatTarget,
+                message: message
+            });
+
+            input.value = '';
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            currentNickname = null;
+            currentChatTarget = 'all';
+            onlineUsers = [];
+            privateMessages = {};
+            groupMessages = [];
+            
+            if (ws) {
+                ws.close();
+            }
+            
+            document.getElementById('chatContainer').style.display = 'none';
+            document.getElementById('authContainer').style.display = 'flex';
+            document.getElementById('loginForm').reset();
+            document.getElementById('registerForm').reset();
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            connectWebSocket();
+        }
+
+        init();
+    </script>
+</body>
+</html>
